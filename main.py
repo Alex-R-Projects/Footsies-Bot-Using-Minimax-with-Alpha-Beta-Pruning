@@ -144,27 +144,58 @@ def create_tree_for_attack():
 
 tree = create_tree_for_attack()
 
-# Assign values to leaf nodes manually (example values)
-tree.children[0].children[0].value = 3  # "Move Backward -> Move Backward"
-tree.children[0].children[1].value = 5  # "Move Backward -> Attack"
-tree.children[0].children[2].value = 2  # "Move Backward -> Move Forward"
+# Leaf node values
+leaf_values = [
+    [3, 5, 2],  # "Move Backward -> ... "
+    [4, 6, 1],  # "Attack -> ... "
+    [7, 8, 0]   # "Move Forward -> ... "
+]
 
-tree.children[1].children[0].value = 4  # "Attack -> Move Backward"
-tree.children[1].children[1].value = 6  # "Attack -> Attack"
-tree.children[1].children[2].value = 1  # "Attack -> Move Forward"
+# Loop through the children of the tree
+for i, child in enumerate(tree.children):
+    for j, grandchild in enumerate(child.children):
+        grandchild.value = leaf_values[i][j]
 
-tree.children[2].children[0].value = 7  # "Move Forward -> Move Backward"
-tree.children[2].children[1].value = 8  # "Move Forward -> Attack"
-tree.children[2].children[2].value = 0  # "Move Forward -> Move Forward"
     
 def evaluation_function():
     pass
 
-def build_tree():
-    pass
+def minimax_alpha_beta(node, depth, is_maximizing, alpha, beta):
+    """
+    Implements the Minimax algorithm with Alpha-Beta Pruning.
 
-def minimax_alpha_beta():
-    pass
+    :param node: The current TreeNode.
+    :param depth: The depth of the current node.
+    :param is_maximizing: Boolean, True if the current level is maximizing.
+    :param alpha: The best value that the maximizer can guarantee.
+    :param beta: The best value that the minimizer can guarantee.
+    :return: The optimal value for the node.
+    """
+    # Base case: If the node is a leaf node, return its value
+    if not node.children:  # No children means it's a leaf node
+        return node.value
+
+    if is_maximizing:
+        max_eval = float('-inf')
+        for child in node.children:
+            eval = minimax_alpha_beta(child, depth + 1, False, alpha, beta)
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:  # Prune the remaining branches
+                break
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for child in node.children:
+            eval = minimax_alpha_beta(child, depth + 1, True, alpha, beta)
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:  # Prune the remaining branches
+                break
+        return min_eval
+
+# A way to call minimax_alpha_beta
+optimal_value = minimax_alpha_beta(tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'))
 
 # Perform an action using `pynput`
 def perform_action(action):
