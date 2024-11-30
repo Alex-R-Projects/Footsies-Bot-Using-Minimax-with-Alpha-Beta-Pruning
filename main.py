@@ -79,7 +79,7 @@ def focus_game_window():
 # Launch the game
 def launch_game():
     try:
-        game_process = subprocess.Popen(r"GAME_PATH", shell=True)
+        game_process = subprocess.Popen(r"C:\Users\ardui\Downloads\FOOTSIES_v1_5_0\FOOTSIES_v1_5_0\FOOTSIES.exe", shell=True)
         if game_process is None:
             raise ValueError("Failed to start the game process.")
         print("Game launched.")
@@ -88,7 +88,75 @@ def launch_game():
         print(f"Error launching the game: {e}")
         return None
 
+class TreeNode:
+    def __init__(self, name, value=None):
+        """
+        Initializes a node in the tree.
 
+        :param name: Name of the node.
+        :param value: The value of the node, used in minimax (default is None).
+        """
+        self.name = name
+        self.value = value  # This value is used for terminal nodes in Minimax
+        self.children = []
+
+    def add_child(self, child_node):
+        """
+        Adds a child to the current node.
+        :param child_node: Instance of TreeNode.
+        """
+        self.children.append(child_node)
+
+
+def create_tree_for_attack():
+    """
+    Creates a tree structure similar to the one in the image.
+
+    :return: The root of the tree.
+    """
+    # Root node
+    root = TreeNode("Root")
+
+    # First level
+    move_backward = TreeNode("Move Backward")
+    attack = TreeNode("Attack")
+    move_forward = TreeNode("Move Forward")
+    root.add_child(move_backward)
+    root.add_child(attack)
+    root.add_child(move_forward)
+
+    # Second level for "Move Backward"
+    move_backward.add_child(TreeNode("Move Backward"))
+    move_backward.add_child(TreeNode("Attack"))
+    move_backward.add_child(TreeNode("Move Forward"))
+
+    # Second level for "Attack"
+    attack.add_child(TreeNode("Move Backward"))
+    attack.add_child(TreeNode("Attack"))
+    attack.add_child(TreeNode("Move Forward"))
+
+    # Second level for "Move Forward"
+    move_forward.add_child(TreeNode("Move Backward"))
+    move_forward.add_child(TreeNode("Attack"))
+    move_forward.add_child(TreeNode("Move Forward"))
+
+    return root
+
+tree = create_tree_for_attack()
+
+# Assign values to leaf nodes manually (example values)
+tree.children[0].children[0].value = 3  # "Move Backward -> Move Backward"
+tree.children[0].children[1].value = 5  # "Move Backward -> Attack"
+tree.children[0].children[2].value = 2  # "Move Backward -> Move Forward"
+
+tree.children[1].children[0].value = 4  # "Attack -> Move Backward"
+tree.children[1].children[1].value = 6  # "Attack -> Attack"
+tree.children[1].children[2].value = 1  # "Attack -> Move Forward"
+
+tree.children[2].children[0].value = 7  # "Move Forward -> Move Backward"
+tree.children[2].children[1].value = 8  # "Move Forward -> Attack"
+tree.children[2].children[2].value = 0  # "Move Forward -> Move Forward"
+    
 def evaluation_function():
     pass
 
