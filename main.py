@@ -118,84 +118,108 @@ def create_tree_for_attack():
     root = TreeNode("Root")
 
     # First level
-    move_backward = TreeNode("Move Backward")
-    attack = TreeNode("Attack")
-    move_forward = TreeNode("Move Forward")
+    move_backward = TreeNode("move_left")
+    attack = TreeNode("neutral_attack")
+    move_forward = TreeNode("move_right")
     root.add_child(move_backward)
     root.add_child(attack)
     root.add_child(move_forward)
 
     # Second level for "Move Backward"
-    move_backward.add_child(TreeNode("Move Backward"))
-    move_backward.add_child(TreeNode("Attack"))
-    move_backward.add_child(TreeNode("Move Forward"))
+    move_backward.add_child(TreeNode("move_left"))
+    move_backward.add_child(TreeNode("neutral_attack"))
+    move_backward.add_child(TreeNode("move_right"))
 
     # Second level for "Attack"
-    attack.add_child(TreeNode("Move Backward"))
-    attack.add_child(TreeNode("Attack"))
-    attack.add_child(TreeNode("Move Forward"))
+    attack.add_child(TreeNode("move_left"))
+    attack.add_child(TreeNode("neutral_attack"))
+    attack.add_child(TreeNode("move_right"))
 
     # Second level for "Move Forward"
-    move_forward.add_child(TreeNode("Move Backward"))
-    move_forward.add_child(TreeNode("Attack"))
-    move_forward.add_child(TreeNode("Move Forward"))
+    move_forward.add_child(TreeNode("move_left"))
+    move_forward.add_child(TreeNode("neutral_attack"))
+    move_forward.add_child(TreeNode("move_right"))
 
     return root
 
-tree = create_tree_for_attack()
+
 
 # Leaf node values
-leaf_values = [
-    [3, 5, 2],  # "Move Backward -> ... "
-    [4, 6, 1],  # "Attack -> ... "
-    [7, 8, 0]   # "Move Forward -> ... "
-]
+def assign_tree_values(tree, move_names):
+    """
+    Assigns evaluation scores to the tree's leaf nodes based on the move names.
 
-# Loop through the children of the tree
-for i, child in enumerate(tree.children):
-    for j, grandchild in enumerate(child.children):
-        grandchild.value = leaf_values[i][j]
+    :param tree: The root node of the tree.
+    :param move_names: List of move names corresponding to the tree structure.
+    """
+    for i, child in enumerate(tree.children):
+        for j, grandchild in enumerate(child.children):
+            move_name = move_names[i][j]
+            grandchild.value = evaluation_function(move_name)
 
+def evaluation_function(move_name):
+    """
+    Evaluate the value of a move based on its frame data.
+
+    :param move_name: The name of the move to evaluate (key in FRAME_DATA).
+    :return: The calculated score for the move.
+    """
+    if move_name not in FRAME_DATA:
+        raise ValueError(f"Move {move_name} not found in frame data.")
     
-def evaluation_function():
-    pass
+    # Extract frame data for the move
+    move_data = FRAME_DATA[move_name]
+    startup = move_data["startup"]
+    active = move_data["active"]
+    recovery = move_data["recovery"]
+    can_cancel = move_data["can_cancel"]
+    is_ko = move_data["KO"]
+
+    # Calculate the score
+    score = (
+        (10 / (startup + 1))  # Faster startup is better
+        + (2 * active)        # Active frames are weighted positively
+        - (recovery / 2)      # Recovery time is weighted negatively
+    )
+    # Bonus for moves that can cancel
+    if can_cancel:
+        score += 5
+
+    # Bonus for KO moves
+    if is_ko:
+        score += 10
+
+    return score
+
 
 def minimax_alpha_beta(node, depth, is_maximizing, alpha, beta):
-    """
-    Implements the Minimax algorithm with Alpha-Beta Pruning.
+    # Base case: If the node is a leaf node, return its value and itself
+    if not node.children:
+        return node.value, node
 
-    :param node: The current TreeNode.
-    :param depth: The depth of the current node.
-    :param is_maximizing: Boolean, True if the current level is maximizing.
-    :param alpha: The best value that the maximizer can guarantee.
-    :param beta: The best value that the minimizer can guarantee.
-    :return: The optimal value for the node.
-    """
-    # Base case: If the node is a leaf node, return its value
-    if not node.children:  # No children means it's a leaf node
-        return node.value
-
+    best_node = None
     if is_maximizing:
         max_eval = float('-inf')
         for child in node.children:
-            eval = minimax_alpha_beta(child, depth + 1, False, alpha, beta)
-            max_eval = max(max_eval, eval)
+            eval, _ = minimax_alpha_beta(child, depth + 1, False, alpha, beta)
+            if eval > max_eval:
+                max_eval = eval
+                best_node = child
             alpha = max(alpha, eval)
             if beta <= alpha:  # Prune the remaining branches
                 break
-        return max_eval
+        return max_eval, best_node
     else:
         min_eval = float('inf')
         for child in node.children:
-            eval = minimax_alpha_beta(child, depth + 1, True, alpha, beta)
-            min_eval = min(min_eval, eval)
+            eval, _ = minimax_alpha_beta(child, depth + 1, True, alpha, beta)
+            if eval < min_eval:
+                min_eval = eval
+                best_node = child
             beta = min(beta, eval)
             if beta <= alpha:  # Prune the remaining branches
                 break
-        return min_eval
-
-# A way to call minimax_alpha_beta
-optimal_value = minimax_alpha_beta(tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'))
+        return min_eval, best_node
 
 # Perform an action using `pynput`
 def perform_action(action):
@@ -251,6 +275,15 @@ def on_click(x, y, button, pressed):
             game_starting = True
             return False 
 
+move_names = [
+    ["move_left", "neutral_attack", "move_right"],  # For "Move Backward" branch
+    ["move_left", "neutral_attack", "move_right"], # For "Attack" branch
+    ["move_left", "neutral_attack", "move_right"], # For "Move Forward" branch
+]
+tree = create_tree_for_attack()
+assign_tree_values(tree, move_names)
+
+
 # Main loop
 def main():
     # Launch the game and start the bot immediately
@@ -274,15 +307,16 @@ def main():
               
             # Get possible moves
             possible_moves = get_possible_moves(movement_state)
+            
+            # Get the optimized move
+            optimize_value, best_node = minimax_alpha_beta(tree, depth=0, is_maximizing=True, alpha=float('-inf'), beta=float('inf'))
+            print(f"Optimized value: {optimize_value}, Best move: {best_node.name}")
 
-            # Randomize move selection
-            selected_move = random.choice(possible_moves)
-
-            # Perform the selected move
-            perform_action(selected_move)
+            # Perform the best action
+            perform_action(best_node.name)
 
             # Update movement state for next iteration
-            if selected_move in ["move_left", "move_right"]:
+            if best_node.name in ["move_left", "move_right"]:
                 movement_state = "moving"
             else:
                 movement_state = "idle"
